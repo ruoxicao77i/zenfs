@@ -107,6 +107,7 @@ IOStatus Zone::Finish() {
   IOStatus ios = zbd_be_->Finish(start_);
   if (ios != IOStatus::OK()) return ios;
 
+  finish_padding_bytes_ = capacity_;
   capacity_ = 0;
   wp_ = start_ + zbd_->GetZoneSize();
 

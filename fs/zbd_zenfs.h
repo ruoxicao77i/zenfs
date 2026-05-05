@@ -64,6 +64,7 @@ class Zone {
   uint64_t wp_;
   Env::WriteLifeTimeHint lifetime_;
   std::atomic<uint64_t> used_capacity_;
+  uint64_t finish_padding_bytes_ = 0; /* bytes padded by explicit Finish() */
 
   IOStatus Reset();
   IOStatus Finish();
@@ -229,6 +230,7 @@ class ZonedBlockDevice {
     return bytes_written_.load() - gc_bytes_written_.load();
   };
   uint64_t GetTotalBytesWritten() { return bytes_written_.load(); };
+  uint64_t GetGCBytesWritten() { return gc_bytes_written_.load(); };
 
  private:
   IOStatus GetZoneDeferredStatus();

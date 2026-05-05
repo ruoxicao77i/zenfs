@@ -46,8 +46,9 @@ class Superblock {
   uint32_t nr_zones_ = 0;
   char aux_fs_path_[256] = {0};
   uint32_t finish_treshold_ = 0;
+  uint32_t gc_start_level_ =20;
   char zenfs_version_[64]{0};
-  char reserved_[123] = {0};
+  char reserved_[119] = {0};
 
  public:
   const uint32_t MAGIC = 0x5a454e46; /* ZENF */
@@ -61,7 +62,7 @@ class Superblock {
   /* Create a superblock for a filesystem covering the entire zoned block device
    */
   Superblock(ZonedBlockDevice* zbd, std::string aux_fs_path = "",
-             uint32_t finish_threshold = 0, bool enable_gc = false) {
+             uint32_t finish_threshold = 0, bool enable_gc = false, uint32_t gc_start_level = 20) {
     std::string uuid = Env::Default()->GenerateUniqueId();
     int uuid_len =
         std::min(uuid.length(),
@@ -71,9 +72,9 @@ class Superblock {
     superblock_version_ = CURRENT_SUPERBLOCK_VERSION;
     flags_ = DEFAULT_FLAGS;
     if (enable_gc) flags_ |= FLAGS_ENABLE_GC;
-
+    gc_start_level_ = gc_start_level;
     finish_treshold_ = finish_threshold;
-
+    
     block_size_ = zbd->GetBlockSize();
     zone_size_ = zbd->GetZoneSize() / block_size_;
     nr_zones_ = zbd->GetNrZones();
@@ -95,6 +96,7 @@ class Superblock {
   uint32_t GetFinishTreshold() { return finish_treshold_; }
   std::string GetUUID() { return std::string(uuid_); }
   bool IsGCEnabled() { return flags_ & FLAGS_ENABLE_GC; };
+  uint32_t GetGCStartLevel() { return gc_start_level_ ? gc_start_level_ : 20; }
 };
 
 class ZenMetaLog {
@@ -280,7 +282,7 @@ class ZenFS : public FileSystemWrapper {
 
   Status Mount(bool readonly);
   Status MkFS(std::string aux_fs_path, uint32_t finish_threshold,
-              bool enable_gc);
+            bool enable_gc, uint32_t gc_start_level = 20);
   std::map<std::string, Env::WriteLifeTimeHint> GetWriteLifeTimeHints();
 
   const char* Name() const override {
@@ -459,7 +461,7 @@ class ZenFS : public FileSystemWrapper {
       const std::vector<ZoneExtentSnapshot*>& migrate_exts);
 
  private:
-  const uint64_t GC_START_LEVEL =
+  uint64_t gc_start_level_ =
       20;                      /* Enable GC when < 20% free space available */
   const uint64_t GC_SLOPE = 3; /* GC agressiveness */
   void GCWorker();
